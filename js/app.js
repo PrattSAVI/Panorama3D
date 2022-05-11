@@ -1,11 +1,10 @@
 const urlid = 'c3cb20c3ad524955a3bb4d0f95b7ba4c';
 
-var win = document.querySelector('.window');
+const win = document.querySelector('.window'); // Floating window over the iframe
+const win2 = document.querySelector(".window2");
+const win3 = document.querySelector(".window3");
+
 var iframe = document.querySelector('#api-frame');
-var cameraPath = [
-    [0, 0, 800],
-    [300, 300, 1200]
-];
 
 var cameraPosition = null;
 var initialCameraPosition = null;
@@ -14,145 +13,198 @@ var isDragging = false;
 var cameraSpeed = -0.001;
 var cameraScrollSpeed = 1.5;
 
+// Camera Movement
+function deltapos(x1, x2, step, i) {
+    return x1 + (((x2 - x1) / step) * i)
+}
+
+//Camera Animation
 function updateCamera() {
     if (viewer.api && viewer.camera && cameraPosition) {
-        viewer.api.setCameraLookAt(cameraPosition, viewer.camera.target, 0);
+        viewer.api.setCameraLookAt(cameraPosition, [0, 0, 0], 0);
     }
     requestAnimationFrame(updateCamera);
 }
 
+// get IDs for the giver layer. Blend Object give things as Layer:XXX
+function getIDs(result, layer) {
+    let objs = result.children[0].children[0].children[0].children[0].children;
+    let ids = [];
+    objs.forEach(el => {
+        if (el.name.includes(layer)) { // Filter Layer
+            ids.push(el.instanceID)
+        }
+    });
+    return ids
+}
+
+// get IDs for the giver layer. Blend Object give things as Layer:XXX
+function getID_Reverse(result, layer) {
+    let objs = result.children[0].children[0].children[0].children[0].children;
+    let ids = [];
+    objs.forEach(el => {
+        if (!el.name.includes(layer)) { // Filter Layer
+            ids.push(el.instanceID)
+        }
+    });
+    return ids
+}
+
+
+// Initializing viewer starts off the API. viewer.api
+// This uses the first iframe
 var viewer = new Viewer(urlid, iframe, function() {
 
-    // Camera Set Up
-    cameraPosition = vec3.fromValues( // Get position
-        viewer.camera.position[0],
-        viewer.camera.position[1],
-        viewer.camera.position[2]
-    );
-
-    win.addEventListener('touchstart', onPointerStart);
-    win.addEventListener('mousedown', onPointerStart);
-    win.addEventListener('touchmove', onPointerMove);
-    win.addEventListener('mousemove', onPointerMove);
-    win.addEventListener('touchend', onPointerEnd);
-    win.addEventListener('mouseup', onPointerEnd);
-    updateCamera();
+    // Camera Set Up, position and target values
+    let campos = viewer.camera.position
+    cameraPosition = vec3.fromValues(campos[0], campos[1], campos[2]) // Get position
+    updateCamera(); // Initiate Animate
 
     // Get Object IDs and integrate into the scroll
     viewer.api.getSceneGraph(function(err, result) {
-        let objs = result.children[0].children[0].children[0].children[0].children;
-        console.log(objs);
-        let ids = [];
-        objs.forEach(el => {
-            if (el.name.includes("Areas")) {
-                ids.push(el.instanceID)
-            }
-        });
-        console.log(ids);
+
+        //Get Ids to hide and show
+        let ids = getIDs(result, "Areas");
         let past_prog = 0 // I'll use this to determine direction
-        let hidden = [];
-        let h_range = null;
-        let getRange = 0;
 
-
-        //I have all object IDS HERe
-
+        // 1st Scroll interaction is here.
         var scrollWindow = new ScrollWindow(win, function(progress) {
             // Viewer visibility
-            var start = 10
-            var end = 90
+            var duration = [10, 90];
+
+            var path = [
+                [-400, -400, 350],
+                [-100, -100, 100]
+            ];
+
             var objs_count = ids.length
+
+            // ---------------------------------- SHOW / HIDE -------------------------------------------
             var viewerEl = document.querySelector('.viewer');
-            if (progress < start || progress > end) {
-                viewerEl.classList.remove('visible'); // Make iframe invisible
-                ids.forEach(el => { // Reset hidden values in iframe
-                    viewer.api.show(el);
-                })
-            } else {
-                viewerEl.classList.add('visible');
+            // .Viewer contains iframes container, Show and hide the iframe, so fade
+            if (progress > -100 && progress < 100) {
+                if (progress < duration[0] || progress > duration[1]) {
+                    viewerEl.classList.remove('visible'); // Make iframe invisible
+                } else {
+                    viewerEl.classList.add('visible');
+                }
+            }
+
+            // Reset hidden objects
+            if ((progress < 0 || progress > 100) && progress < 120) { // If the iframe has past
+                ids.forEach(el => { viewer.api.show(el) })
             }
 
             // Which way is the site being scrolled
-            if (progress > start & progress < end) {
-                let dir = null;
-                if (past_prog - progress > 0) {
-                    dir = 'up'
-                } else {
-                    dir = 'down'
-                }
-
-                if (dir == 'down') { // Hide thing on the way down
-                    console.log('Going Down');
-                    let getRange = Math.round((objs_count / (end - start)) * progress);
-                    let pastRange = Math.round((objs_count / (end - start)) * past_prog)
-                    let temp = ids.slice(pastRange, getRange); //All objects until now. This can be simplified
-                    temp.forEach(el => {
-                        viewer.api.hide(el)
-                    });
-
-                }
-
-                if (dir == 'up') { // Show stuff on the way up
-                    let maxRange = Math.round((objs_count / (end - start)) * progress)
+            if (progress > duration[0] & progress < duration[1]) {
+                //let dir = null;
+                if (past_prog - progress > 0) { //Going Down
+                    let maxRange = Math.round((objs_count / (duration[1] - duration[0])) * progress)
                     let temp = ids.slice(maxRange, ids.length);
                     temp.forEach(el => {
                         viewer.api.show(el)
                     });
+                } else { // Going Up
+                    let getRange = Math.round((objs_count / (duration[1] - duration[0])) * progress);
+                    let pastRange = Math.round((objs_count / (duration[1] - duration[0])) * past_prog)
+                    let temp = ids.slice(pastRange, getRange);
+                    temp.forEach(el => {
+                        viewer.api.hide(el)
+                    });
                 }
 
-                if (cameraPosition) {
-                    var cameraProgress = Math.min(100, progress * cameraScrollSpeed);
-                    //x
-                    cameraPosition[0] = cameraPath[0][0] + ((cameraPath[0][0] - cameraPath[1][0]) / 100) * cameraProgress;
-                    //y
-                    cameraPosition[1] = cameraPath[0][1] + ((cameraPath[0][1] - cameraPath[1][1]) / 100) * cameraProgress;
+                if (cameraPosition) { // Camera Movement over scroll
+                    var x1 = path[0][0];
+                    var x2 = path[1][0];
+                    var y1 = path[0][1];
+                    var y2 = path[1][1];
+                    step = duration[1]
+                    console.log(progress, deltapos(x1, x2, step, progress), deltapos(y1, y2, step, progress), deltapos(path[0][2], path[1][2], step, progress))
+                    cameraPosition = vec3.fromValues(deltapos(x1, x2, step, progress), deltapos(y1, y2, step, progress), deltapos(path[0][2], path[1][2], step, progress));
                 }
+
                 past_prog = progress;
             };
 
         });
 
+        // Second Scroll Object
+        var scrollAround = new ScrollWindow(win2, function(progress) {
 
+            var duration = [10, 90];
+            // ---------------------------------- SHOW / HIDE -------------------------------------------
+            var viewerEl = document.querySelector('.viewer');
+            // .Viewer contains iframes container, Show and hide the iframe, so fade
+            if (progress > 0) {
+                if (progress < duration[0] || progress > duration[1]) {
+                    viewerEl.classList.remove('visible'); // Make iframe invisible
+                } else {
+                    viewerEl.classList.add('visible');
+                }
+            }
+
+            if (progress > duration[0] & progress < duration[1]) {
+
+                var speed = Math.min(Math.abs(progress - duration[0]), Math.abs(progress - duration[1]))
+
+                var x = Math.cos((progress / 75 + (speed / 100)) + 15) * 300;
+                var y = Math.sin((progress / 75 + (speed / 100)) + 15) * 300;
+
+                console.log(x, y)
+                cameraPosition = vec3.fromValues(x, y, 250)
+            }
+        })
+
+        // Zoom and Hide
+        var scrollZoom = new ScrollWindow(win3, function(progress) {
+
+            //console.log(result)
+            let ids = getID_Reverse(result, "Concrete");
+            var duration = [10, 90];
+            var path = [
+                    [-300, -300, 300],
+                    [-38, 19, 20]
+                ]
+                // ---------------------------------- SHOW / HIDE -------------------------------------------
+            var viewerEl = document.querySelector('.viewer');
+            // .Viewer contains iframes container, Show and hide the iframe, so fade
+            if (progress > 0 && progress < 100) {
+
+                //Hide OR Show Everyting
+                if (progress > 70 && progress < duration[1]) {
+                    ids.forEach(el => {
+                        viewer.api.hide(el);
+                    });
+                } else {
+                    ids.forEach(el => {
+                        viewer.api.show(el);
+                    });
+                }
+
+
+                if (progress < duration[0] || progress > duration[1]) {
+                    viewerEl.classList.remove('visible'); // Make iframe invisible
+                } else {
+                    viewerEl.classList.add('visible');
+                }
+            }
+
+            //Move Camera
+            if (progress > duration[0] && progress < duration[1]) {
+
+                //cameraPosition = vec3.fromValues([0, 0, 100])
+                var x1 = path[0][0];
+                var x2 = path[1][0];
+                var y1 = path[0][1];
+                var y2 = path[1][1];
+                step = duration[1]
+                console.log(progress, deltapos(x1, x2, step, progress), deltapos(y1, y2, step, progress), deltapos(path[0][2], path[1][2], step, progress))
+                cameraPosition = vec3.fromValues(deltapos(x1, x2, step, progress), deltapos(y1, y2, step, progress), deltapos(path[0][2], path[1][2], step, progress))
+
+            }
+        })
 
 
     });
 
 });
-
-function onPointerStart(e) {
-    if (!cameraPosition) {
-        return;
-    }
-    var x = e.touches ? e.touches[0].screenX : e.screenX;
-    var y = e.touches ? e.touches[0].screenY : e.screenY;
-    isDragging = true;
-    initialTouch = [x, y];
-    initialCameraPosition = vec3.clone(cameraPosition);
-}
-
-function onPointerMove(e) {
-    if (!cameraPosition) {
-        return;
-    }
-
-    if (!isDragging) {
-        return;
-    }
-
-    var x = e.touches ? e.touches[0].screenX : e.screenX;
-    var y = e.touches ? e.touches[0].screenY : e.screenY;
-    var delta = [x - initialTouch[0], y - initialTouch[1]];
-    var angle = Math.PI * delta[0] * cameraSpeed;
-    var out = vec3.create();
-    var cameraTargetVec = vec3.create(
-        viewer.camera.target[0],
-        viewer.camera.target[1],
-        viewer.camera.target[2]
-    );
-    vec3.rotateZ(out, initialCameraPosition, cameraTargetVec, angle);
-    vec3.set(cameraPosition, out[0], out[1], cameraPosition[2]);
-}
-
-function onPointerEnd(e) {
-    isDragging = false;
-}

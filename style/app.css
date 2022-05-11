@@ -34,6 +34,18 @@ body {
     max-width: 10em;
 }
 
+.window3 {
+    position: relative;
+    height: 1800px;
+    padding: 100px 0 100px 0;
+}
+
+.window2 {
+    position: relative;
+    height: 800px;
+    padding: 100px 0 100px 0;
+}
+
 .window {
     position: relative;
     height: 100vh;
