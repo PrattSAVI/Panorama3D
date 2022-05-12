@@ -8,9 +8,50 @@ body {
     padding: 0;
 }
 
+.app {
+    max-width: 768px;
+    margin: auto;
+}
+
+svg {
+    display: block;
+    margin: auto;
+}
+
+.title {
+    font-size: 48px;
+    font-weight: normal;
+    background-color: #222;
+    min-height: 120px;
+    margin-bottom: 20px;
+    padding: 45px;
+}
+
+.popup {
+    position: absolute;
+    width: 250px;
+    height: 250px;
+    background-color: white;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.popup.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
 .article {
     position: absolute;
     width: 100%;
+    max-width: 768px;
+}
+
+.map {
+    max-width: 960px;
+    margin: 25px auto;
+    justify-content: center;
 }
 
 .article__body {
