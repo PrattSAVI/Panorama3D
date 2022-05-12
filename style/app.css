@@ -29,17 +29,18 @@ svg {
 
 .popup {
     position: absolute;
-    width: 250px;
-    height: 250px;
     background-color: white;
-    visibility: hidden;
     opacity: 0;
     transition: opacity 0.3s;
+    color: #222;
+    padding: 15px;
+    font-size: 9pt;
+    border-radius: 8px;
+    max-width: 120px;
 }
 
 .popup.visible {
-    opacity: 1;
-    visibility: visible;
+    opacity: 1 !important;
 }
 
 .article {

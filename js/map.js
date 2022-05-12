@@ -6,12 +6,15 @@ const mapHeight = 640 - margin.top - margin.bottom;
 
 var svg = d3.select(".map").append("svg")
     .attr('width', mapWidth + margin.left + margin.right)
-    .attr('height', mapHeight + margin.top + margin.bottom);
+    .attr('height', mapHeight + margin.top + margin.bottom)
+    .attr("viewbox", [0, 0, mapHeight, mapHeight])
+    .attr("style", "max-width: 100%; height: auto; height: intrinsic;");
 
 
 d3.json(url).then(function(nycGeo) {
 
     var projection = d3.geoAlbers()
+        .rotate([74, 0]) //Rotate the projection
         .fitSize([mapWidth, mapHeight], nycGeo)
 
     var path = d3.geoPath()
@@ -33,6 +36,9 @@ d3.json(url).then(function(nycGeo) {
     console.log(maps);
 
     // Geo Boundaries
+
+    var popup = document.querySelector('.popup');
+
     g1.selectAll("path")
         .data(maps)
         .join("path")
@@ -45,28 +51,40 @@ d3.json(url).then(function(nycGeo) {
         .data(markers)
         .join("path")
         .attr("d", path)
-        .attr("fill", 'rgba(0,0,0,0)')
+        .attr("fill", 'rgba(0,0,0,0.5)')
         .attr("stroke", "red")
-        .attr("id", "flushing");
+        .attr("id", function(d) {
+            return d.properties.id
+        })
+        .on("mouseenter", (e) => {
+            console.log(e.target.id)
 
-    document.querySelector("#flushing").addEventListener("mouseenter", function(e) {
+            let active = markers.filter(function(d) {
+                return d.properties.id == e.target.id
+            })
+            console.log(active[0].properties)
 
-        var popup = document.querySelector('.popup');
-        popup.classList.add('visible');
+            console.log("in", e.pageX, e.pageY)
+            popup.style.opacity = 0.9;
+            popup.style.left = e.pageX + "px";
+            popup.style.top = e.pageY + "px";
+            popup.innerHTML = `<p>${active[0].properties.title}</p><p><b>Topic:</b> ${active[0].properties.Topic}</p><div><img width='100' alt='pop' src='${active[0].properties.img_url}' /><div>`;
+        })
+        .on("mouseleave", (e) => {
+            console.log("out")
+            popup.style.opacity = 0;
+        })
+        .on("click", (e) => {
+            console.log("Clicked, I am moving on");
 
-        console.log(popup)
+            var elmntToView = document.querySelector(".article__hero.flushing");
+            console.log(elmntToView);
+            elmntToView.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+                duration: 200
+            });
 
-        popup.style.left = e.pageX - 60 + "px";
-        popup.style.top = e.pageY - 60 + "px";
-
-    });
-
-    document.querySelector("#flushing").addEventListener("mouseleave", function(e) {
-
-        var popup = document.querySelector('.popup');
-        popup.classList.remove('visible');
-
-
-    });
+        });
 
 });
