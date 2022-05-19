@@ -1,4 +1,5 @@
-const urlid = 'c3cb20c3ad524955a3bb4d0f95b7ba4c';
+//const urlid = 'c3cb20c3ad524955a3bb4d0f95b7ba4c';
+const urlid = '1a2f1b172bb44a85986fb018f7f2c6b5'
 
 const win = document.querySelector('.window'); // Floating window over the iframe
 const win2 = document.querySelector(".window2");
@@ -7,6 +8,7 @@ const win3 = document.querySelector(".window3");
 var iframe = document.querySelector('#api-frame');
 
 var cameraPosition = null;
+var targetlocation = null;
 var initialCameraPosition = null;
 var initialTouch = null;
 var isDragging = false;
@@ -20,8 +22,8 @@ function deltapos(x1, x2, step, i) {
 
 //Camera Animation
 function updateCamera() {
-    if (viewer.api && viewer.camera && cameraPosition) {
-        viewer.api.setCameraLookAt(cameraPosition, [0, 0, 0], 0);
+    if (viewer.api && viewer.camera && cameraPosition, targetlocation) {
+        viewer.api.setCameraLookAt(cameraPosition, targetlocation, 0);
     }
     requestAnimationFrame(updateCamera);
 }
@@ -29,6 +31,7 @@ function updateCamera() {
 // get IDs for the giver layer. Blend Object give things as Layer:XXX
 function getIDs(result, layer) {
     let objs = result.children[0].children[0].children[0].children[0].children;
+
     let ids = [];
     objs.forEach(el => {
         if (el.name.includes(layer)) { // Filter Layer
@@ -57,30 +60,31 @@ var viewer = new Viewer(urlid, iframe, function() {
 
     // Camera Set Up, position and target values
     let campos = viewer.camera.position
-    cameraPosition = vec3.fromValues(campos[0], campos[1], campos[2]) // Get position
+    cameraPosition = vec3.fromValues(campos[0], campos[1], campos[2])
+    targetlocation = [50828, 9609, 480]; // Look at QM
     updateCamera(); // Initiate Animate
 
     // Get Object IDs and integrate into the scroll
     viewer.api.getSceneGraph(function(err, result) {
 
         //Get Ids to hide and show
-        let ids = getIDs(result, "Areas");
         let past_prog = 0 // I'll use this to determine direction
 
         // 1st Scroll interaction is here.
         var scrollWindow = new ScrollWindow(win, function(progress) {
             // Viewer visibility
             var duration = [10, 90];
-
             var path = [
-                [-400, -400, 350],
-                [-100, -100, 100]
+                [52115, 10174, 1200],
+                [52115, 10174, 800]
             ];
 
+            let ids = getIDs(result, "Areas");
             var objs_count = ids.length
 
             // ---------------------------------- SHOW / HIDE -------------------------------------------
             var viewerEl = document.querySelector('.viewer');
+
             // .Viewer contains iframes container, Show and hide the iframe, so fade
             if (progress > -100 && progress < 100) {
                 if (progress < duration[0] || progress > duration[1]) {
@@ -97,21 +101,6 @@ var viewer = new Viewer(urlid, iframe, function() {
 
             // Which way is the site being scrolled
             if (progress > duration[0] & progress < duration[1]) {
-                //let dir = null;
-                if (past_prog - progress > 0) { //Going Down
-                    let maxRange = Math.round((objs_count / (duration[1] - duration[0])) * progress)
-                    let temp = ids.slice(maxRange, ids.length);
-                    temp.forEach(el => {
-                        viewer.api.show(el)
-                    });
-                } else { // Going Up
-                    let getRange = Math.round((objs_count / (duration[1] - duration[0])) * progress);
-                    let pastRange = Math.round((objs_count / (duration[1] - duration[0])) * past_prog)
-                    let temp = ids.slice(pastRange, getRange);
-                    temp.forEach(el => {
-                        viewer.api.hide(el)
-                    });
-                }
 
                 if (cameraPosition) { // Camera Movement over scroll
                     var x1 = path[0][0];
@@ -119,11 +108,10 @@ var viewer = new Viewer(urlid, iframe, function() {
                     var y1 = path[0][1];
                     var y2 = path[1][1];
                     step = duration[1]
-                    console.log(progress, deltapos(x1, x2, step, progress), deltapos(y1, y2, step, progress), deltapos(path[0][2], path[1][2], step, progress))
+                        //console.log(progress, deltapos(x1, x2, step, progress), deltapos(y1, y2, step, progress), deltapos(path[0][2], path[1][2], step, progress))
                     cameraPosition = vec3.fromValues(deltapos(x1, x2, step, progress), deltapos(y1, y2, step, progress), deltapos(path[0][2], path[1][2], step, progress));
                 }
 
-                past_prog = progress;
             };
 
         });
@@ -132,6 +120,11 @@ var viewer = new Viewer(urlid, iframe, function() {
         var scrollAround = new ScrollWindow(win2, function(progress) {
 
             var duration = [10, 90];
+            let ids = getIDs(result, "Sandy");
+            objs_count = ids.length;
+            cam = [52115, 10174, 1200];
+
+            viewer.api.show(ids[0]);
             // ---------------------------------- SHOW / HIDE -------------------------------------------
             var viewerEl = document.querySelector('.viewer');
             // .Viewer contains iframes container, Show and hide the iframe, so fade
@@ -143,67 +136,25 @@ var viewer = new Viewer(urlid, iframe, function() {
                 }
             }
 
+            if (progress > 35 & progress < duration[1]) { //Going Down
+                viewer.api.show(ids[0]);
+            } else { // Going Up
+                viewer.api.hide(ids[0]);
+            }
+
             if (progress > duration[0] & progress < duration[1]) {
 
                 var speed = Math.min(Math.abs(progress - duration[0]), Math.abs(progress - duration[1]))
 
-                var x = Math.cos((progress / 75 + (speed / 100)) + 15) * 300;
-                var y = Math.sin((progress / 75 + (speed / 100)) + 15) * 300;
+                // Initial Position + rotation
+                var x = (cam[0]) + Math.cos((progress / 75 + (speed / 100))) * 15000;
+                var y = (cam[1]) + Math.sin((progress / 75 + (speed / 100))) * 15000;
 
-                console.log(x, y)
-                cameraPosition = vec3.fromValues(x, y, 250)
+                //console.log(x, y)
+                cameraPosition = vec3.fromValues(x, y, 8000)
             }
+            past_prog = progress;
         })
-
-        // Zoom and Hide
-        var scrollZoom = new ScrollWindow(win3, function(progress) {
-
-            //console.log(result)
-            let ids = getID_Reverse(result, "Concrete");
-            var duration = [10, 90];
-            var path = [
-                    [-300, -300, 300],
-                    [-38, 19, 20]
-                ]
-                // ---------------------------------- SHOW / HIDE -------------------------------------------
-            var viewerEl = document.querySelector('.viewer');
-            // .Viewer contains iframes container, Show and hide the iframe, so fade
-            if (progress > 0 && progress < 100) {
-
-                //Hide OR Show Everyting
-                if (progress > 70 && progress < duration[1]) {
-                    ids.forEach(el => {
-                        viewer.api.hide(el);
-                    });
-                } else {
-                    ids.forEach(el => {
-                        viewer.api.show(el);
-                    });
-                }
-
-
-                if (progress < duration[0] || progress > duration[1]) {
-                    viewerEl.classList.remove('visible'); // Make iframe invisible
-                } else {
-                    viewerEl.classList.add('visible');
-                }
-            }
-
-            //Move Camera
-            if (progress > duration[0] && progress < duration[1]) {
-
-                //cameraPosition = vec3.fromValues([0, 0, 100])
-                var x1 = path[0][0];
-                var x2 = path[1][0];
-                var y1 = path[0][1];
-                var y2 = path[1][1];
-                step = duration[1]
-                console.log(progress, deltapos(x1, x2, step, progress), deltapos(y1, y2, step, progress), deltapos(path[0][2], path[1][2], step, progress))
-                cameraPosition = vec3.fromValues(deltapos(x1, x2, step, progress), deltapos(y1, y2, step, progress), deltapos(path[0][2], path[1][2], step, progress))
-
-            }
-        })
-
 
     });
 

@@ -84,8 +84,9 @@ svg {
 
 .window2 {
     position: relative;
-    height: 800px;
-    padding: 100px 0 100px 0;
+    height: 100vh;
+    padding: 40vh 0 150vh 0;
+    max-width: 300px;
 }
 
 .window {
@@ -94,14 +95,20 @@ svg {
     padding: 40vh 0 80vh 0;
 }
 
+.img-holder {
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
 .window__help {
     position: absolute;
     top: 70%;
     left: 0;
     color: #efefef;
     background: rgba(0, 0, 0, 0.4);
-    padding: 30px;
+    padding: 45px;
     font-family: arial, sans-serif;
+    font-size: 18pt;
     z-index: 2;
     border-radius: 3px;
     pointer-events: none;
